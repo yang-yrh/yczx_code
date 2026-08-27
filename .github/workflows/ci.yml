@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  git-policy:
+    name: git-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate pull request metadata
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          branch_pattern='^(feat|fix|docs|test|refactor|chore|ci|revert)/[a-z0-9]+(-[a-z0-9]+)*$'
+          title_pattern='^(feat|fix|docs|test|refactor|chore|ci|revert)(\([a-z0-9-]+\))?: .+$'
+
+          if [[ ! "$HEAD_REF" =~ $branch_pattern ]]; then
+            echo "Invalid branch name: $HEAD_REF"
+            exit 1
+          fi
+
+          if [[ ! "$PR_TITLE" =~ $title_pattern ]]; then
+            echo "Invalid pull request title: $PR_TITLE"
+            exit 1
+          fi
+
+          branch_type="${HEAD_REF%%/*}"
+          title_type="${PR_TITLE%%:*}"
+          title_type="${title_type%%(*}"
+          summary="${PR_TITLE#*: }"
+
+          if [[ "$branch_type" != "$title_type" ]]; then
+            echo "Branch type and pull request title type must match."
+            exit 1
+          fi
+
+          if (( ${#summary} > 72 )); then
+            echo "Pull request title summary must not exceed 72 characters."
+            exit 1
+          fi
+
+      - name: Validate main commit
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          subject="$(git log -1 --pretty=%s)"
+          subject_pattern='^(feat|fix|docs|test|refactor|chore|ci|revert)(\([a-z0-9-]+\))?: .+$'
+          parent_count="$(git rev-list --parents -n 1 HEAD | awk '{print NF - 1}')"
+
+          if (( parent_count > 1 )); then
+            echo "Merge commits are not allowed on main."
+            exit 1
+          fi
+
+          if [[ "$subject" != "chore: initialize YCZX Code" && ! "$subject" =~ $subject_pattern ]]; then
+            echo "Invalid main commit subject: $subject"
+            exit 1
+          fi
+
+      - name: Check pull request whitespace
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA...$HEAD_SHA"
+
+      - name: Reject forbidden tracked files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          violations=()
+          while IFS= read -r path; do
+            case "$path" in
+              .env|.env.*|*/.env|*/.env.*|*.pem|*.key|*.p12|*.pfx|*.crt|*/id_rsa|*/id_ed25519|\
+              *.log|*.db|*.sqlite|*.sqlite3|\
+              .venv/*|*/.venv/*|venv/*|*/venv/*|\
+              __pycache__/*|*/__pycache__/*|.pytest_cache/*|*/.pytest_cache/*|\
+              .ruff_cache/*|*/.ruff_cache/*|node_modules/*|*/node_modules/*|\
+              build/*|*/build/*|dist/*|*/dist/*|*.egg-info/*|*/.egg-info/*|\
+              .coverage|.coverage.*|coverage.xml|htmlcov/*|*/htmlcov/*|\
+              .DS_Store|*/.DS_Store|.idea/*|*/.idea/*|.vscode/*|*/.vscode/*|*.pdf)
+                violations+=("$path")
+                ;;
+            esac
+          done < <(git ls-files)
+
+          if (( ${#violations[@]} > 0 )); then
+            printf 'Forbidden tracked file: %s\n' "${violations[@]}"
+            exit 1
+          fi
+
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install
+
+      - name: Verify lock file
+        run: uv lock --check
+
+      - name: Install project
+        run: uv sync --locked --dev
+
+      - name: Run Ruff
+        run: uv run ruff check .
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Check CLI
+        run: uv run yczx --help

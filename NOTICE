@@ -1,0 +1,5 @@
+YCZX Code 版权与来源说明
+
+本仓库原创代码与文档按 GNU AGPL-3.0-only 授权，详见 LICENSE。
+
+Provider 协议、Agent 结构和只读工具设计可能参考公开项目；实际采用的代码、文档和示例必须在来源矩阵中登记，并保留第三方许可证与版权要求。Typer、pytest、ruff 等依赖继续适用各自许可证。
