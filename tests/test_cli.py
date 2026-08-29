@@ -18,3 +18,10 @@ def test_version() -> None:
 
     assert result.exit_code == 0
     assert result.output.strip() == __version__
+
+
+def test_run_demo() -> None:
+    result = runner.invoke(app, ["run", "--task", "1 + 2"])
+
+    assert result.exit_code == 0
+    assert "完成" in result.output

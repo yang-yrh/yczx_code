@@ -21,3 +21,7 @@ class ToolRegistry:
 
     def names(self) -> list[str]:
         return list(self._tools)
+
+    def all(self) -> list[Tool]:
+        """返回全部已注册工具。"""
+        return list(self._tools.values())

@@ -4,7 +4,7 @@ YCZX Code（命令名 `yczx`）是一个面向代码阅读与项目理解的轻�
 
 它是燕中生态的本地 Agent 客户端：官方配置通过燕中统一 API 网关调用模型，独立开源使用可通过 Provider 适配器连接兼容端点。模型供应商、额度和账单不会进入 Agent 核心。
 
-> 当前状态：框架骨架已搭建。公共契约、模型适配端口、工具、安全策略、Agent、内存、MCP、插件与终端各层已就位，CLI 提供帮助与版本信息。ReAct 循环、真实 Provider 与只读工具仍在实现中，各层以占位形式给出接口，未将计划中的能力写成已实现功能。
+> 当前状态：预览纵向切片可运行。CLI `run` 命令通过 FakeProvider + 计算器工具走通一次有界 ReAct 循环（模型→工具→回填→最终回答），事件流全程记录并渲染。公共契约、模型适配端口、工具、安全策略、Agent 各层已就位；真实 Provider、文件只读工具、内存、MCP、插件与复杂 TUI 仍以占位或待实现形式存在，未将计划中的能力写成已实现功能。
 
 ## 目标
 
@@ -31,10 +31,13 @@ yczx [WORKSPACE]
 ```bash
 uv sync --dev
 uv run yczx --help
+uv run yczx run --task "2 * 8"
 uv run pytest
 ```
 
 增加运行依赖使用 `uv add <package>`，增加开发依赖使用 `uv add --dev <package>`。不得使用全局 `pip` 安装项目依赖。
+
+`yczx run` 使用 FakeProvider 离线演示工具调用与 ReAct 循环，无需 API Key。接通真实模型后，将 Provider 替换为网关或兼容端点适配器即可。
 
 ## 目录结构（分层）
 

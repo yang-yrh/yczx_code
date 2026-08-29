@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..core.contracts import Message, ToolCall
+from ..core.contracts import Message, ProviderResponse, ToolSpec
 
 
 class ProviderError(Exception):
@@ -16,6 +16,10 @@ class OpenAICompatibleProvider:
         self._base_url = base_url
         self._api_key = api_key
 
-    def chat(self, messages: list[Message], tools: list[ToolCall] | None = None) -> str:
+    def chat(
+        self,
+        messages: list[Message],
+        tools: list[ToolSpec] | None = None,
+    ) -> ProviderResponse:
         # TODO: 请求、超时、重试与错误映射。
         raise NotImplementedError

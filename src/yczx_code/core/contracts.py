@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
 
@@ -31,6 +31,15 @@ class ToolCall:
     call_id: str
     name: str
     arguments: dict[str, object]
+
+
+@dataclass(frozen=True)
+class ToolSpec:
+    """提供给模型的工具定义（名称、说明与参数 schema）。"""
+
+    name: str
+    description: str
+    parameters: dict[str, object]
 
 
 class ToolResultStatus(StrEnum):
@@ -62,6 +71,14 @@ class AgentEvent:
 
 
 @dataclass(frozen=True)
+class ProviderResponse:
+    """Provider 公共响应：正文与结构化工具调用。"""
+
+    content: str
+    tool_calls: list[ToolCall] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class AgentResult:
     """Agent 回合的终止结果。"""
 
@@ -81,5 +98,9 @@ class PolicyDecision(StrEnum):
 class Provider(Protocol):
     """公共请求到公共响应的转换端口。"""
 
-    def chat(self, messages: list[Message], tools: list[ToolCall] | None = None) -> str:
-        """发送请求并返回模型回复。"""
+    def chat(
+        self,
+        messages: list[Message],
+        tools: list[ToolSpec] | None = None,
+    ) -> ProviderResponse:
+        """发送请求并返回模型回复（正文与结构化工具调用）。"""
