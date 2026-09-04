@@ -77,6 +77,7 @@ CLI 只负责输入输出；Agent、Provider、工具、上下文、事件与安
 
 ## 文档
 
+- [团队分工说明](TEAM_DIVISION.md)
 - [Agent 协作约定](AGENTS.md)
 - [来源说明](NOTICE)
 - [许可证](LICENSE)
