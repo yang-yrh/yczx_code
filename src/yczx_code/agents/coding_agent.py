@@ -19,8 +19,7 @@ from ..core.contracts import (
 )
 
 _SYSTEM_PROMPT = (
-    "你是一个终端 Coding Agent。在需要时可调用工具获取结果，"
-    "并用中文给出简洁、准确的最终回答。"
+    "你是一个终端 Coding Agent。在需要时可调用工具获取结果，并用中文给出简洁、准确的最终回答。"
 )
 
 
@@ -37,6 +36,7 @@ class CodingAgent(Agent):
         step = 0
         while step < self._config.max_steps:
             step += 1
+            self._context.trim()
             self._emit("model_request", {"step": step, "tool_names": [s.name for s in specs]})
             response = self._provider.chat(self._context.messages(), specs)
             if response.tool_calls:

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 from .agents.coding_agent import CodingAgent
 from .core.config import AppConfig
 from .core.context import Context
-from .core.contracts import Provider
+from .core.contracts import AgentResult, Provider, Role
 from .core.events import EventStream
-from .core.session import SessionStore
+from .core.session import Session, SessionNotFoundError, SessionStore
 from .providers.base import OpenAICompatibleProvider
 from .providers.fake import FakeProvider
 from .providers.gateway import YCZXGatewayProvider
@@ -33,6 +35,7 @@ class Application:
         self._events = EventStream()
         self._context = Context(max_tokens=config.max_tokens)
         self._store = store
+        self._session: Session | None = None
         self._agent = CodingAgent(
             name="yczx",
             provider=self._provider,
@@ -56,6 +59,38 @@ class Application:
 
     def registry(self) -> ToolRegistry:
         return self._registry
+
+    def session_store(self) -> SessionStore | None:
+        """返回注入的会话存储端口，供会话恢复与持久化使用。"""
+        return self._store
+
+    def run(self, task: str, session_id: str | None = None) -> AgentResult:
+        """执行任务，并在配置了会话存储时恢复与保存上下文。"""
+        if self._store is None:
+            return self._agent.run(task)
+
+        session = self._load_or_create_session(session_id)
+        self._session = session
+        self._context.replace(
+            [message for message in session.messages if message.role is not Role.SYSTEM]
+        )
+        result = self._agent.run(task)
+        session.messages = self._context.messages()
+        self._store.save(session)
+        return result
+
+    def session_id(self) -> str | None:
+        """返回最近一次运行使用的会话 ID。"""
+        return self._session.session_id if self._session is not None else None
+
+    def _load_or_create_session(self, session_id: str | None) -> Session:
+        """按 ID 读取既有会话，不存在时创建新会话。"""
+        assert self._store is not None
+        session_id = session_id or uuid4().hex
+        try:
+            return self._store.load(session_id)
+        except SessionNotFoundError:
+            return Session(session_id=session_id)
 
     def events(self):
         """返回事件流，供远端回放或 CLI 渲染。"""

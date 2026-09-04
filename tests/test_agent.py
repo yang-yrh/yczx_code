@@ -2,12 +2,28 @@ from pathlib import Path
 
 from yczx_code.application import Application
 from yczx_code.core.config import AppConfig, ProviderConfig
+from yczx_code.core.contracts import Message, ProviderResponse, Role
 from yczx_code.providers.fake import FakeProvider
 
 
 def _app(tmp_path: Path) -> Application:
     config = AppConfig(workspace=tmp_path, provider=ProviderConfig(name="fake"))
     return Application(config, provider=FakeProvider())
+
+
+class _RecordingProvider:
+    """记录传给模型的请求，用于验证 Agent 在调用前裁剪上下文。"""
+
+    def __init__(self) -> None:
+        self.requests: list[list[Message]] = []
+
+    def chat(
+        self,
+        messages: list[Message],
+        tools: object | None = None,
+    ) -> ProviderResponse:
+        self.requests.append(list(messages))
+        return ProviderResponse(content="ok")
 
 
 def test_agent_runs_tool_loop(tmp_path: Path) -> None:
@@ -34,3 +50,22 @@ def test_agent_caps_steps(tmp_path: Path) -> None:
     # 用非算术任务让 FakeProvider 直接返回结果，步数仍受控。
     result = app.agent().run("hi")
     assert result.stop_reason in {"complete", "max_steps"}
+
+
+def test_agent_trims_before_provider_request(tmp_path: Path) -> None:
+    """Agent 每次调用 Provider 前都应先应用上下文裁剪。"""
+    config = AppConfig(
+        workspace=tmp_path,
+        provider=ProviderConfig(name="fake"),
+        max_tokens=1,
+    )
+    provider = _RecordingProvider()
+    app = Application(config, provider=provider)
+
+    result = app.agent().run("hello")
+
+    assert result.stop_reason == "complete"
+    assert len(provider.requests) == 1
+    messages = provider.requests[0]
+    assert len(messages) == 1
+    assert messages[0].role is Role.SYSTEM

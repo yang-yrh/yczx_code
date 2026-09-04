@@ -21,6 +21,7 @@ env/
 *.db
 *.sqlite
 *.sqlite3
+.yczx/
 
 # IDE/editor
 .vscode/

@@ -11,6 +11,7 @@ from yczx_code import __version__
 
 from ..application import Application
 from ..core.config import AppConfig, ProviderConfig
+from ..core.session import FileSessionStore
 from ..providers.fake import FakeProvider
 from .render import TerminalRenderer
 
@@ -48,15 +49,21 @@ def run(
         str,
         typer.Option("--task", "-t", help="任务提示。"),
     ] = "1 + 2",
+    session_id: Annotated[
+        str,
+        typer.Option("--session", "-s", help="会话 ID，默认使用 default。"),
+    ] = "default",
 ) -> None:
     """运行一次演示任务（默认使用 FakeProvider，离线可跑）。"""
     root = (workspace or Path.cwd()).resolve()
     config = AppConfig(workspace=root, provider=ProviderConfig(name="fake"))
-    application = Application(config, provider=FakeProvider())
+    store = FileSessionStore(root / ".yczx" / "sessions")
+    application = Application(config, store=store, provider=FakeProvider())
     renderer = TerminalRenderer()
-    result = application.agent().run(task)
+    result = application.run(task, session_id=session_id)
     for event in application.events().events:
         renderer.render(event)
+    typer.echo("会话 ID: " + str(application.session_id()), err=True)
     typer.echo("停止原因: " + result.stop_reason, err=True)
 
 

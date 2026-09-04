@@ -40,7 +40,7 @@ CLI -> Application -> Agent -> Provider 端口
 - 正式主线使用单 Agent、单个有界 ReAct 循环。
 - 当前实现只读能力：`list_dir`、`read_file`、`search_files`、`get_project_rules`。
 - `memory/`、`mcp/`、`plugins/`、子 Agent 与 TUI 等层作为接口/占位搭好，对应能力尚未实现，不得写成已实现功能。
-- 会话在进程内存中，不提供长期记忆或云端同步。
+- CLI 默认使用工作区 `.yczx/sessions` 保存本地会话，不提供长期记忆或云端同步。
 - 文件写入、任意 Shell、MCP、多 Agent、插件与复杂 TUI 需先具备操作预览、显式确认、最小权限、审计与恢复契约，完成前保持关闭。
 - Plan-and-Solve、Reflection 等实验只在 Lab 或独立分支验证，不并列复制公共消息、工具、Provider 和 Policy。
 

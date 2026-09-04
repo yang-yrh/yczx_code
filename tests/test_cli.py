@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from yczx_code import __version__
@@ -20,8 +22,8 @@ def test_version() -> None:
     assert result.output.strip() == __version__
 
 
-def test_run_demo() -> None:
-    result = runner.invoke(app, ["run", "--task", "1 + 2"])
+def test_run_demo(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["run", str(tmp_path), "--task", "1 + 2"])
 
     assert result.exit_code == 0
     assert "完成" in result.output
