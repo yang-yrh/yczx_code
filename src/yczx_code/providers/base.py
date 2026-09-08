@@ -7,6 +7,9 @@ from ..core.contracts import Message, ProviderResponse, ToolSpec
 
 class ProviderError(Exception):
     """Provider 调用错误。"""
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(message)
 
 
 class OpenAICompatibleProvider:

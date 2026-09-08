@@ -2,8 +2,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from yczx_code import __version__
-from yczx_code.ui.cli import app
+from src.yczx_code import __version__
+from src.yczx_code.ui.cli import app
 
 runner = CliRunner()
 

@@ -1,7 +1,6 @@
 """工具调用流水线：执行前 hook、审批、权限、沙箱、超时；执行后改写、日志、渲染。"""
 
 from __future__ import annotations
-
 from typing import Any
 
 
